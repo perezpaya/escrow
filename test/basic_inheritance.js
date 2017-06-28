@@ -40,11 +40,11 @@ contract('BasicInheritance', function(accounts) {
       }
     })
 
-    it('gives available balance', async () => {
+    it('returns available balance', async () => {
       await bi.addBeneficiary(accounts[1])
       await bi.send(10)
-      // console.log(await bi.getAvailableBalance.call({ from: accounts[1] }))
-      // assert.equal(await bi.getAvailableBalance({ from: accounts[1] }), 10, 'should give 10 wei of available balance to beneficiary')
+      // TODO: Change this by checking contract balance with web3
+      assert.equal(await bi.depositedAmount(), 10, 'should have received balance')
     })
   })
 });

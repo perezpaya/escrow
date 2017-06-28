@@ -8,12 +8,16 @@ contract BasicInheritance is Ownable {
 
   string public description;
 
-  function BasicInheritance(string _description) {
+  function BasicInheritance(string _description, uint _timeUntilUnlock) {
     description = _description;
+    lastOwnerNotice = block.timestamp;
+    timeUntilUnlock = _timeUntilUnlock;
   }
 
   address[] beneficiaries;
   uint public depositedAmount;
+  uint public lastOwnerNotice;
+  uint public timeUntilUnlock;
 
   function () payable {
     processDeposit();
@@ -37,6 +41,18 @@ contract BasicInheritance is Ownable {
     return this.balance / beneficiaries.length;
   }
 
+  function cashOut() onlyIfUnlocked onlyBeneficiaries {
+    availableBalance = getAvailableBalance();
+    depositedAmount -= availableBalance;
+    removeFromBeneficiaries(msg.sender);
+    msg.sender.transfer(availableBalance);
+    BeneficiaryCashedOut(msg.value, msg.sender);
+  }
+
+  function removeFromBeneficiaries(address beneficiary) internal {
+    beneficiaries.removeByValue(beneficiary);
+  }
+
   modifier onlyBeneficiariesOrOwner() {
     require(msg.sender == owner || beneficiaries.includes(msg.sender));
     _;
@@ -47,6 +63,12 @@ contract BasicInheritance is Ownable {
     _;
   }
 
+  modifier onlyIfUnlocked() {
+    require(block.timestamp > timeUntilUnlock + lastOwnerNotice);
+    _;
+  }
+
   event Deposit(uint value, address fiduciary);
   event NewBeneficiary(address beneficiary);
+  event BeneficiaryCashedOut(uint value, address beneficiary);
 }
