@@ -15,42 +15,64 @@ contract BasicInheritance is Ownable {
   }
 
   address[] beneficiaries;
-  uint public depositedAmount;
   uint public lastOwnerNotice;
   uint public timeUntilUnlock;
 
-  function () payable {
+  function () payable updateLastOwnerNotice {
     processDeposit();
   }
 
+  function widthdraw(uint value) updateLastOwnerNotice onlyOwner {
+    uint amount = this.balance > value ? value : this.balance;
+    msg.sender.transfer(amount);
+    Withdrawal(amount, msg.sender);
+  }
+
   function processDeposit() internal {
-    depositedAmount += msg.value;
     Deposit(msg.value, msg.sender);
   }
 
-  function addBeneficiary(address beneficiary) onlyOwner {
+  function getBeneficiaries() updateLastOwnerNotice public returns (address[]) {
+    return beneficiaries;
+  }
+
+  function addBeneficiary(address beneficiary) onlyOwner updateLastOwnerNotice {
     beneficiaries.push(beneficiary);
     NewBeneficiary(beneficiary);
   }
 
-  function getBeneficiaries() public returns (address[]) {
-    return beneficiaries;
+  function removeBeneficiary(address beneficiary) onlyOwner updateLastOwnerNotice {
+    removeBeneficiaryByAddress(beneficiary);
+    BeneficiaryRemoved(beneficiary);
   }
 
-  function getAvailableBalance() onlyBeneficiariesOrOwner public returns (uint) {
-    return this.balance / beneficiaries.length;
+  function getAvailableBalance() onlyBeneficiaries public returns (uint) {
+    return isUnlocked() ? (this.balance / beneficiaries.length) : 0;
   }
 
-  function cashOut() onlyIfUnlocked onlyBeneficiaries {
-    availableBalance = getAvailableBalance();
-    depositedAmount -= availableBalance;
-    removeFromBeneficiaries(msg.sender);
+  function beneficiaryCashOut() onlyIfUnlocked onlyBeneficiaries {
+    uint availableBalance = getAvailableBalance();
+    removeBeneficiaryByAddress(msg.sender);
     msg.sender.transfer(availableBalance);
-    BeneficiaryCashedOut(msg.value, msg.sender);
+    BeneficiaryRemoved(msg.sender);
+    Withdrawal(availableBalance, msg.sender);
   }
 
-  function removeFromBeneficiaries(address beneficiary) internal {
+  function removeBeneficiaryByAddress(address beneficiary) internal {
     beneficiaries.removeByValue(beneficiary);
+  }
+
+  function isUnlocked() public returns (bool) {
+    return block.timestamp >= timeUntilUnlock + lastOwnerNotice;
+  }
+
+  function endContract() onlyOwner {
+    selfdestruct(msg.sender);
+  }
+
+  modifier updateLastOwnerNotice() {
+    if (msg.sender == owner) { lastOwnerNotice = block.timestamp; }
+    _;
   }
 
   modifier onlyBeneficiariesOrOwner() {
@@ -64,11 +86,12 @@ contract BasicInheritance is Ownable {
   }
 
   modifier onlyIfUnlocked() {
-    require(block.timestamp > timeUntilUnlock + lastOwnerNotice);
+    require(isUnlocked());
     _;
   }
 
   event Deposit(uint value, address fiduciary);
+  event Withdrawal(uint value, address fiduciary);
   event NewBeneficiary(address beneficiary);
-  event BeneficiaryCashedOut(uint value, address beneficiary);
+  event BeneficiaryRemoved(address beneficiary);
 }
