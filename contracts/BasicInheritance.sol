@@ -18,11 +18,11 @@ contract BasicInheritance is Ownable {
   uint public lastOwnerNotice;
   uint public timeUntilUnlock;
 
-  function () payable updateLastOwnerNotice {
+  function () payable updateOwnerNotice {
     processDeposit();
   }
 
-  function widthdraw(uint value) updateLastOwnerNotice onlyOwner {
+  function widthdraw(uint value) onlyOwner updateOwnerNotice {
     uint amount = this.balance > value ? value : this.balance;
     msg.sender.transfer(amount);
     Withdrawal(amount, msg.sender);
@@ -32,21 +32,21 @@ contract BasicInheritance is Ownable {
     Deposit(msg.value, msg.sender);
   }
 
-  function getBeneficiaries() updateLastOwnerNotice public returns (address[]) {
+  function getBeneficiaries() public constant returns (address[]) {
     return beneficiaries;
   }
 
-  function addBeneficiary(address beneficiary) onlyOwner updateLastOwnerNotice {
+  function addBeneficiary(address beneficiary) onlyOwner updateOwnerNotice {
     beneficiaries.push(beneficiary);
     NewBeneficiary(beneficiary);
   }
 
-  function removeBeneficiary(address beneficiary) onlyOwner updateLastOwnerNotice {
+  function removeBeneficiary(address beneficiary) onlyOwner updateOwnerNotice {
     removeBeneficiaryByAddress(beneficiary);
     BeneficiaryRemoved(beneficiary);
   }
 
-  function getAvailableBalance() onlyBeneficiaries public returns (uint) {
+  function getAvailableBalance() onlyBeneficiaries public constant returns (uint) {
     return isUnlocked() ? (this.balance / beneficiaries.length) : 0;
   }
 
@@ -62,16 +62,20 @@ contract BasicInheritance is Ownable {
     beneficiaries.removeByValue(beneficiary);
   }
 
-  function isUnlocked() public returns (bool) {
+  function isUnlocked() public constant returns (bool) {
     return block.timestamp >= timeUntilUnlock + lastOwnerNotice;
+  }
+  
+  function updateLastOwnerNotice() onlyOwner public {
+    lastOwnerNotice = block.timestamp;
   }
 
   function endContract() onlyOwner {
     selfdestruct(msg.sender);
   }
 
-  modifier updateLastOwnerNotice() {
-    if (msg.sender == owner) { lastOwnerNotice = block.timestamp; }
+  modifier updateOwnerNotice() {
+    if (msg.sender == owner) { updateLastOwnerNotice(); }
     _;
   }
 

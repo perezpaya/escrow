@@ -1,5 +1,5 @@
-const assertJump = require('./helpers/assertJump');
-const assertOpcode = require('./helpers/assertOpcode');
+const assertJump = require('./helpers/assert_jump')
+const assertOpcode = require('./helpers/assert_opcode')
 
 const BasicInheritance = artifacts.require('BasicInheritance')
 
