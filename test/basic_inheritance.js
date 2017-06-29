@@ -10,7 +10,7 @@ contract('BasicInheritance', function(accounts) {
     bi = await BasicInheritance.new('A basic inheritance test contract', 1000)
   })
 
-  describe('()', async() => {
+  describe('.()', async() => {
     it('can receive funds', async () => {
       await bi.send(10)
       assert.equal(await getBalance(bi.address), 10, 'should have received balance')
@@ -22,8 +22,9 @@ contract('BasicInheritance', function(accounts) {
       try {
         await bi.addBeneficiary(0x0, {from: accounts[1]})
       } catch(e) {
-        assertOpcode(e, 'should throw error when adding beneficiary from a non owner address')
+        return assertOpcode(e, 'should throw error when adding beneficiary from a non owner address')
       }
+      assert.fail('should have failed')
     })
 
     it('adds a beneficiary', async () => {
@@ -47,16 +48,18 @@ contract('BasicInheritance', function(accounts) {
       try {
         await bi.removeBeneficiary(accounts[1], { from: accounts[2] })
       } catch(e) {
-        assertOpcode(e, 'should throw error when removing beneficiary from a non owner address')
+        return assertOpcode(e, 'should throw error when removing beneficiary from a non owner address')
       }
+      assert.fail('should have failed')
     })
 
     it('can not remove non existing beneficieries', async () => {
       try {
         await bi.removeBeneficiary(0x0)
       } catch(e) {
-        assertOpcode(e, 'should throw error when removing non existing beneficiary')
+        return assertOpcode(e, 'should throw error when removing non existing beneficiary')
       }
+      assert.fail('should have failed')
     })
 
     it('removes a beneficiary', async () => {
@@ -85,8 +88,9 @@ contract('BasicInheritance', function(accounts) {
       try {
         await bi.getAvailableBalance()
       } catch(e) {
-        assertOpcode(e, 'should throw error when adding beneficiary from a non owner address')
+        return assertOpcode(e, 'should throw error when adding beneficiary from a non owner address')
       }
+      assert.fail('should have failed')
     })
 
     it('is restricted to beneficiary and owner', async () => {
@@ -95,8 +99,9 @@ contract('BasicInheritance', function(accounts) {
         try {
           await bi.getAvailableBalance({ from: accounts[2] })
         } catch(e) {
-          assertOpcode(e, 'should throw error when getting available balance from a non beneficiary')
+          return assertOpcode(e, 'should throw error when getting available balance from a non beneficiary')
         }
+        assert.fail('should have failed')
       })
     })
 
