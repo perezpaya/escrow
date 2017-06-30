@@ -1,5 +1,4 @@
-const assertJump = require('./helpers/assert_jump')
-const assertOpcode = require('./helpers/assert_opcode')
+const { assertJump, assertOpcode } = require('./helpers/assert_utils')
 
 const BasicInheritance = artifacts.require('BasicInheritance')
 
@@ -10,21 +9,24 @@ contract('BasicInheritance', function(accounts) {
     bi = await BasicInheritance.new('A basic inheritance test contract', 1000)
   })
 
-  describe('.()', async() => {
+  describe('#()', async() => {
     it('can receive funds', async () => {
       await bi.send(10)
       assert.equal(await getBalance(bi.address), 10, 'should have received balance')
     })
   })
 
-  describe('.addBeneficiary()', function (){
+  describe('#addBeneficiary()', function (){
     it('is restricted to owner', async () => {
-      try {
+      assertOpcode(async () => {
         await bi.addBeneficiary(0x0, {from: accounts[1]})
-      } catch(e) {
-        return assertOpcode(e, 'should throw error when adding beneficiary from a non owner address')
-      }
-      assert.fail('should have failed')
+      }, 'should throw error when adding beneficiary from a non owner address')
+      // assert.throws(async () => {
+      //   await bi.addBeneficiary(0x0, {from: accounts[1]})
+      // })
+      // assertFailure(() => {
+      //   await bi.addBeneficiary(0x0, {from: accounts[1]})
+      // }, 'should throw error when adding beneficiary from a non owner address')
     })
 
     it('adds a beneficiary', async () => {
@@ -34,7 +36,7 @@ contract('BasicInheritance', function(accounts) {
     })
   })
 
-  describe('.getBeneficiaries()', function (){
+  describe('#getBeneficiaries()', function (){
     it('adds a beneficiary', async () => {
       await bi.addBeneficiary(accounts[1])
       beneficiaries = await bi.getBeneficiaries.call()
@@ -42,24 +44,18 @@ contract('BasicInheritance', function(accounts) {
     })
   })
 
-  describe('.removeBeneficiary()', function () {
+  describe('#removeBeneficiary()', function () {
     it('is restricted to owner', async () => {
       await bi.addBeneficiary(accounts[1])
-      try {
+      assertOpcode(async () => {
         await bi.removeBeneficiary(accounts[1], { from: accounts[2] })
-      } catch(e) {
-        return assertOpcode(e, 'should throw error when removing beneficiary from a non owner address')
-      }
-      assert.fail('should have failed')
+      }, 'should throw error when removing beneficiary from a non owner address')
     })
 
     it('can not remove non existing beneficieries', async () => {
-      try {
+      assertOpcode(async () => {
         await bi.removeBeneficiary(0x0)
-      } catch(e) {
-        return assertOpcode(e, 'should throw error when removing non existing beneficiary')
-      }
-      assert.fail('should have failed')
+      }, 'should throw error when removing non existing beneficiary')
     })
 
     it('removes a beneficiary', async () => {
@@ -70,7 +66,7 @@ contract('BasicInheritance', function(accounts) {
     })
   })
 
-  describe('.isUnlocked()', function () {
+  describe('#isUnlocked()', function () {
     it('it is locked if time has not passed', async () => {
       assert.equal(await bi.isUnlocked.call(), false, 'should not be unlocked')
     })
@@ -82,26 +78,20 @@ contract('BasicInheritance', function(accounts) {
     })
   })
 
-  describe('.getAvailableBalance()', function () {
+  describe('#getAvailableBalance()', function () {
     it('fails when withdrawal is not unlocked', async () => {
       assert.equal(await bi.isUnlocked.call(), false, 'should not be unlocked')
-      try {
+      assertOpcode(async () => {
         await bi.getAvailableBalance()
-      } catch(e) {
-        return assertOpcode(e, 'should throw error when adding beneficiary from a non owner address')
-      }
-      assert.fail('should have failed')
+      }, 'should throw error when adding beneficiary from a non owner address')
     })
 
     it('is restricted to beneficiary and owner', async () => {
       jump('1 day', async () => {
         assert.equal(await bi.isUnlocked.call(), true, 'should be unlocked')
-        try {
+        assertOpcode(async () => {
           await bi.getAvailableBalance({ from: accounts[2] })
-        } catch(e) {
-          return assertOpcode(e, 'should throw error when getting available balance from a non beneficiary')
-        }
-        assert.fail('should have failed')
+        }, 'should throw error when getting available balance from a non beneficiary')
       })
     })
 
