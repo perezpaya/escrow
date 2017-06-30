@@ -62,11 +62,15 @@ contract BasicInheritance is Ownable {
     beneficiaries.removeByValue(beneficiary);
   }
 
+  function isBeneficiary(address beneficiary) public constant returns (bool) {
+    return beneficiaries.includes(beneficiary);
+  }
+
   function isUnlocked() public constant returns (bool) {
     return block.timestamp >= timeUntilUnlock + lastOwnerNotice;
   }
 
-  function updateLastOwnerNotice() onlyOwner public {
+  function heartbeat() onlyOwner public {
     lastOwnerNotice = block.timestamp;
   }
 
@@ -75,17 +79,17 @@ contract BasicInheritance is Ownable {
   }
 
   modifier updateOwnerNotice() {
-    if (msg.sender == owner) { updateLastOwnerNotice(); }
+    if (msg.sender == owner) { heartbeat(); }
     _;
   }
 
   modifier onlyBeneficiariesOrOwner() {
-    require(msg.sender == owner || beneficiaries.includes(msg.sender));
+    require(msg.sender == owner || isBeneficiary(msg.sender));
     _;
   }
 
   modifier onlyBeneficiaries() {
-    require(beneficiaries.includes(msg.sender));
+    require(isBeneficiary(msg.sender));
     _;
   }
 
