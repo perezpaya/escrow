@@ -2,8 +2,8 @@ function assertError(error, s, message) {
   assert.isAbove(error.message.search(s), -1, message);
 }
 
-async function assertThrows(block, message, errorMessage) {
-  try { await block() } catch (e) { return assertError(e, errorMessage, message) }
+async function assertThrows(block, message, errorCode) {
+  try { await block() } catch (e) { return assertError(e, errorCode, message) }
 }
 
 module.exports = {

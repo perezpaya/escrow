@@ -22,7 +22,7 @@ contract BasicInheritance is Ownable {
     processDeposit();
   }
 
-  function widthdraw(uint value) onlyOwner updateOwnerNotice {
+  function withdraw(uint value) onlyOwner updateOwnerNotice {
     uint amount = this.balance > value ? value : this.balance;
     msg.sender.transfer(amount);
     Withdrawal(amount, msg.sender);
@@ -50,7 +50,7 @@ contract BasicInheritance is Ownable {
     return isUnlocked() ? (this.balance / beneficiaries.length) : 0;
   }
 
-  function beneficiaryCashOut() onlyIfUnlocked onlyBeneficiaries {
+  function withdrawBeneficiary() onlyIfUnlocked onlyBeneficiaries {
     uint availableBalance = getAvailableBalance();
     removeBeneficiaryByAddress(msg.sender);
     msg.sender.transfer(availableBalance);
@@ -65,7 +65,7 @@ contract BasicInheritance is Ownable {
   function isUnlocked() public constant returns (bool) {
     return block.timestamp >= timeUntilUnlock + lastOwnerNotice;
   }
-  
+
   function updateLastOwnerNotice() onlyOwner public {
     lastOwnerNotice = block.timestamp;
   }

@@ -1,8 +1,7 @@
 const { assertJump, assertOpcode } = require('./helpers/assert_utils')
+const { getBalance, jump } = require('./helpers/rpc_utils')
 
 const BasicInheritance = artifacts.require('BasicInheritance')
-
-const { getBalance, jump } = require('./helpers/web3')
 
 contract('BasicInheritance', function(accounts) {
   beforeEach(async () => {
@@ -16,19 +15,46 @@ contract('BasicInheritance', function(accounts) {
     })
   })
 
-  describe('#addBeneficiary()', function (){
-    it('is restricted to owner', async () => {
-      assertOpcode(async () => {
-        await bi.addBeneficiary(0x0, {from: accounts[1]})
-      }, 'should throw error when adding beneficiary from a non owner address')
-      // assert.throws(async () => {
-      //   await bi.addBeneficiary(0x0, {from: accounts[1]})
-      // })
-      // assertFailure(() => {
-      //   await bi.addBeneficiary(0x0, {from: accounts[1]})
-      // }, 'should throw error when adding beneficiary from a non owner address')
+  describe('#withdraw()', async() => {
+    it('can withdraw funds', async () => {
+      await bi.send(10)
+      await bi.withdraw(10)
+      assert.equal(await getBalance(bi.address), 0, 'should have withdrawed balance')
     })
 
+    it('can withdraw partial funds', async () => {
+      await bi.send(10)
+      await bi.withdraw(5)
+      assert.equal(await getBalance(bi.address), 5, 'should have withdrawed partial balance')
+    })
+
+    it('withdraws total funds if execs total', async () => {
+      await bi.send(10)
+      await bi.withdraw(12)
+      assert.equal(await getBalance(bi.address), 0, 'should have withdrawed total balance')
+    })
+
+    it('can not withdraw funds without being owner', async () => {
+      await bi.send(10)
+      assertOpcode(async () => {
+        await bi.withdraw(5, {from: accounts[1]})
+      }, 'should throw error when withdrawing from a non owner address')
+    })
+  })
+
+  describe('#isUnlocked()', function () {
+    it('it is locked if time has not passed', async () => {
+      assert.equal(await bi.isUnlocked.call(), false, 'should not be unlocked')
+    })
+
+    it('it is unlocked if time has passed', async () => {
+      jump('1 day', async () => {
+        assert.equal(await bi.isUnlocked.call(), true, 'should be unlocked')
+      })
+    })
+  })
+
+  describe('#getBeneficiaries()', function (){
     it('adds a beneficiary', async () => {
       await bi.addBeneficiary(accounts[1])
       beneficiaries = await bi.getBeneficiaries.call()
@@ -36,7 +62,13 @@ contract('BasicInheritance', function(accounts) {
     })
   })
 
-  describe('#getBeneficiaries()', function (){
+  describe('#addBeneficiary()', function (){
+    it('is restricted to owner', async () => {
+      assertOpcode(async () => {
+        await bi.addBeneficiary(0x0, {from: accounts[1]})
+      }, 'should throw error when adding beneficiary from a non owner address')
+    })
+
     it('adds a beneficiary', async () => {
       await bi.addBeneficiary(accounts[1])
       beneficiaries = await bi.getBeneficiaries.call()
@@ -63,18 +95,6 @@ contract('BasicInheritance', function(accounts) {
       await bi.removeBeneficiary(accounts[1])
       beneficiaries = await bi.getBeneficiaries.call()
       assert.equal(beneficiaries.indexOf(accounts[2]) == -1, true, 'should not include removed beneficiary')
-    })
-  })
-
-  describe('#isUnlocked()', function () {
-    it('it is locked if time has not passed', async () => {
-      assert.equal(await bi.isUnlocked.call(), false, 'should not be unlocked')
-    })
-
-    it('it is unlocked if time has passed', async () => {
-      jump('1 day', async () => {
-        assert.equal(await bi.isUnlocked.call(), true, 'should be unlocked')
-      })
     })
   })
 
