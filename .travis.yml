@@ -3,8 +3,9 @@ sudo: false
 group: beta
 language: node_js
 node_js:
-  - "6"
+  - "7"
 before_install:
-  - npm install
+  - npm i truffle@3.3.0 -g
+  - npm i ethereumjs-testrpc -g
 script:
   - truffle test
