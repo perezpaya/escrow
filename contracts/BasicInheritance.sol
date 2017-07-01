@@ -10,19 +10,19 @@ contract BasicInheritance is Ownable {
 
   function BasicInheritance(string _description, uint _timeUntilUnlock) {
     description = _description;
-    lastOwnerNotice = block.timestamp;
     timeUntilUnlock = _timeUntilUnlock;
+    lastHeartbeat = block.timestamp;
   }
 
   address[] beneficiaries;
-  uint public lastOwnerNotice;
+  uint public lastHeartbeat;
   uint public timeUntilUnlock;
 
-  function () payable updateOwnerNotice {
+  function () payable sendHeartbeat {
     processDeposit();
   }
 
-  function withdraw(uint value) onlyOwner updateOwnerNotice {
+  function withdraw(uint value) onlyOwner sendHeartbeat {
     uint amount = this.balance > value ? value : this.balance;
     msg.sender.transfer(amount);
     Withdrawal(amount, msg.sender);
@@ -36,12 +36,12 @@ contract BasicInheritance is Ownable {
     return beneficiaries;
   }
 
-  function addBeneficiary(address beneficiary) onlyOwner updateOwnerNotice {
+  function addBeneficiary(address beneficiary) onlyOwner sendHeartbeat {
     beneficiaries.push(beneficiary);
     NewBeneficiary(beneficiary);
   }
 
-  function removeBeneficiary(address beneficiary) onlyOwner updateOwnerNotice {
+  function removeBeneficiary(address beneficiary) onlyOwner sendHeartbeat {
     removeBeneficiaryByAddress(beneficiary);
     BeneficiaryRemoved(beneficiary);
   }
@@ -67,19 +67,19 @@ contract BasicInheritance is Ownable {
   }
 
   function isUnlocked() public constant returns (bool) {
-    return block.timestamp >= timeUntilUnlock + lastOwnerNotice;
+    return block.timestamp >= (timeUntilUnlock + lastHeartbeat);
   }
 
   function heartbeat() onlyOwner public {
-    lastOwnerNotice = block.timestamp;
+    lastHeartbeat = block.timestamp;
   }
 
   function endContract() onlyOwner {
     selfdestruct(msg.sender);
   }
 
-  modifier updateOwnerNotice() {
-    if (msg.sender == owner) { heartbeat(); }
+  modifier sendHeartbeat() {
+    if (owner == msg.sender) heartbeat();
     _;
   }
 

@@ -1,21 +1,21 @@
 const { assertJump, assertOpcode } = require('./helpers/assert_utils')
-const { getBalance, jump } = require('./helpers/rpc_utils')
+const { getBalance, jump, mine } = require('./helpers/rpc_utils')
 
 const BasicInheritance = artifacts.require('BasicInheritance')
 
 contract('BasicInheritance', function(accounts) {
   beforeEach(async () => {
-    bi = await BasicInheritance.new('A basic inheritance test contract', 1000)
+    bi = await BasicInheritance.new('A basic inheritance test contract', 1)
   })
 
-  describe('#()', async() => {
+  describe('#()', async () => {
     it('can receive funds', async () => {
       await bi.send(10)
       assert.equal(await getBalance(bi.address), 10, 'should have received balance')
     })
   })
 
-  describe('#withdraw()', async() => {
+  describe('#withdraw()', async () => {
     it('can withdraw funds', async () => {
       await bi.send(10)
       await bi.withdraw(10)
@@ -94,31 +94,36 @@ contract('BasicInheritance', function(accounts) {
     })
 
     it('is restricted to beneficiary and owner', async () => {
-      jump('1 day', async () => {
-        assert.isTrue(await bi.isUnlocked.call(), 'should be unlocked')
-        assertOpcode(async () => {
-          await bi.getAvailableBalance({ from: accounts[2] })
-        }, 'should throw error when getting available balance from a non beneficiary')
-      })
+      await bi.heartbeat()
+      await jump('1 day')
+      await mine()
+      assert.isTrue(await bi.isUnlocked.call(), 'should be unlocked')
+      assertOpcode(async () => {
+        await bi.getAvailableBalance({ from: accounts[2] })
+      }, 'should throw error when getting available balance from a non beneficiary')
     })
 
     it('returns available balance for unique beneficiary', async () => {
-      jump('1 day', async () => {
-        await bi.addBeneficiary(accounts[1])
-        await bi.send(10)
-        assert.equal(await getBalance(bi.address), 10, 'should have received balance')
-        assert.equal(await bi.getAvailableBalance(), 10, 'should have received balance')
-      })
+      await bi.send(10)
+      await bi.addBeneficiary(accounts[1])
+      assert.equal(await getBalance(bi.address), 10, 'should have received balance')
+      assert.equal(await bi.getAvailableBalance({ from: accounts[1] }), 0, 'should have no available balance')
+      await jump('1 day')
+      await mine()
+      assert.equal(await bi.getAvailableBalance({ from: accounts[1] }), 10, 'should have available balance')
     })
 
-    it('returns available balance for unique beneficiary', async () => {
-      jump('1 day', async () => {
-        await bi.addBeneficiary(accounts[1])
-        await bi.addBeneficiary(accounts[2])
-        await bi.send(10)
-        assert.equal(await getBalance(bi.address), 10, 'should have received balance')
-        assert.equal(await bi.getAvailableBalance(), 5, 'should have received balance')
-      })
+    it('returns available balance for multiple beneficiaries', async () => {
+      await bi.addBeneficiary(accounts[1])
+      await bi.addBeneficiary(accounts[2])
+      await bi.send(10)
+      assert.equal(await getBalance(bi.address), 10, 'should have received balance')
+      assert.equal(await bi.getAvailableBalance({ from: accounts[1] }), 0, 'should have no available balance')
+      assert.equal(await bi.getAvailableBalance({ from: accounts[2] }), 0, 'should have no available balance')
+      await jump('1 day')
+      await mine()
+      assert.equal(await bi.getAvailableBalance({ from: accounts[1] }), 5, 'should have available half of balance')
+      assert.equal(await bi.getAvailableBalance({ from: accounts[2] }), 5, 'should have available half of balance')
     })
   })
 
@@ -128,34 +133,36 @@ contract('BasicInheritance', function(accounts) {
     })
 
     it('it is unlocked if time has passed', async () => {
-      jump('1 day', async () => {
-        assert.isTrue(await bi.isUnlocked.call(), 'should be unlocked')
-      })
+      await jump('1 day')
+      await mine()
+      assert.isTrue(await bi.isUnlocked.call(), 'should be unlocked')
     })
   })
 
-  describe('#withdrawBeneficiary()', async() => {
+  describe('#withdrawBeneficiary()', async () => {
     it('can withdraw one beneficiary funds', async () => {
       await bi.send(10)
       await bi.addBeneficiary(accounts[1])
-      jump('1 day', async () => {
-        await bi.withdrawBeneficiary({ from: accounts[1] })
-        assert.equal(await getBalance(bi.address), 0, 'should have withdrawed full balance')
-      })
+      await bi.heartbeat()
+      await jump('1 day')
+      await mine()
+      await bi.withdrawBeneficiary({ from: accounts[1] })
+      assert.equal(await getBalance(bi.address), 0, 'should have withdrawed full balance')
     })
 
     it('can withdraw multiple beneficiaries funds', async () => {
       await bi.send(10)
       await bi.addBeneficiary(accounts[1])
       await bi.addBeneficiary(accounts[2])
-      jump('1 day', async () => {
-        await bi.withdrawBeneficiary({ from: accounts[1] })
-        assert.equal(await getBalance(bi.address), 5, 'should have withdrawed partial balance')
-        assert.isFalse(await bi.isBeneficiary(accounts[1]), 'should not be beneficiary anymore')
-        await bi.withdrawBeneficiary({ from: accounts[2] })
-        assert.isFalse(await bi.isBeneficiary(accounts[2]), 'should not be beneficiary anymore')
-        assert.equal(await getBalance(bi.address), 0, 'should have withdrawed remaining balance')
-      })
+      await bi.heartbeat()
+      await jump('1 day')
+      await mine()
+      await bi.withdrawBeneficiary({ from: accounts[1] })
+      assert.equal(await getBalance(bi.address), 5, 'should have withdrawed partial balance')
+      assert.isFalse(await bi.isBeneficiary(accounts[1]), 'should not be beneficiary anymore')
+      await bi.withdrawBeneficiary({ from: accounts[2] })
+      assert.isFalse(await bi.isBeneficiary(accounts[2]), 'should not be beneficiary anymore')
+      assert.equal(await getBalance(bi.address), 0, 'should have withdrawed remaining balance')
     })
 
     it('can not withdraw if locked', async () => {
@@ -169,12 +176,13 @@ contract('BasicInheritance', function(accounts) {
 
     it('can not withdraw if not beneficiary', async () => {
       await bi.send(10)
-      jump('1 day', async () => {
-        assert.isTrue(await bi.isUnlocked.call(), 'should be unlocked')
-        assertOpcode(async () => {
-          await bi.withdrawBeneficiary({ from: accounts[1] })
-        }, 'should throw error when withdrawer is not beneficiary')
-      })
+      await bi.heartbeat()
+      await jump('1 second')
+      await mine()
+      assert.isTrue(await bi.isUnlocked.call(), 'should be unlocked')
+      assertOpcode(async () => {
+        await bi.withdrawBeneficiary({ from: accounts[1] })
+      }, 'should throw error when withdrawer is not beneficiary')
     })
   })
-});
+})
