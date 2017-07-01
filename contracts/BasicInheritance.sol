@@ -6,15 +6,15 @@ import "./ArrayUtils.sol";
 contract BasicInheritance is Ownable {
   using ArrayUtils for address[];
 
-  string public description;
-
-  function BasicInheritance(string _description, uint _timeUntilUnlock) {
-    description = _description;
+  function BasicInheritance(uint _timeUntilUnlock) {
     timeUntilUnlock = _timeUntilUnlock;
     lastHeartbeat = block.timestamp;
   }
 
   address[] beneficiaries;
+
+  string public version = 'v0.1';
+
   uint public lastHeartbeat;
   uint public timeUntilUnlock;
 
@@ -30,6 +30,15 @@ contract BasicInheritance is Ownable {
 
   function processDeposit() internal {
     Deposit(msg.value, msg.sender);
+  }
+
+  function heartbeat() onlyOwner public {
+    lastHeartbeat = block.timestamp;
+    Heartbeat(block.timestamp);
+  }
+
+  function changeTimeUntilUnlock(uint _timeUntilUnlock) onlyOwner public {
+      timeUntilUnlock = _timeUntilUnlock;
   }
 
   function getBeneficiaries() public constant returns (address[]) {
@@ -70,10 +79,6 @@ contract BasicInheritance is Ownable {
     return block.timestamp >= (timeUntilUnlock + lastHeartbeat);
   }
 
-  function heartbeat() onlyOwner public {
-    lastHeartbeat = block.timestamp;
-  }
-
   function endContract() onlyOwner {
     selfdestruct(msg.sender);
   }
@@ -102,4 +107,5 @@ contract BasicInheritance is Ownable {
   event Withdrawal(uint value, address fiduciary);
   event NewBeneficiary(address beneficiary);
   event BeneficiaryRemoved(address beneficiary);
+  event Heartbeat(uint time);
 }

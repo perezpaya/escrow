@@ -5,7 +5,7 @@ const BasicInheritance = artifacts.require('BasicInheritance')
 
 contract('BasicInheritance', function(accounts) {
   beforeEach(async () => {
-    bi = await BasicInheritance.new('A basic inheritance test contract', 1)
+    bi = await BasicInheritance.new(1)
   })
 
   describe('#()', async () => {
